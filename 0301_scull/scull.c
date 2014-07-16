@@ -103,6 +103,7 @@ ssize_t scull_read(struct file *filp, char __user *buf, size_t count, loff_t *f_
 
     printk(KERN_ALERT "scull_read");
     printk(KERN_ALERT "qset = %d; count = %d; f_pos = %d", qset, count, *f_pos);
+    printk(KERN_ALERT "dev->size = %ld", dev->size);
 
     if (*f_pos >= dev->size)
         goto out;
@@ -127,6 +128,7 @@ ssize_t scull_read(struct file *filp, char __user *buf, size_t count, loff_t *f_
         retval = -EFAULT;
         goto out;
     }
+    printk(KERN_INFO "buf = %s", buf);
     *f_pos += count;
     retval = count;
 
@@ -137,7 +139,7 @@ ssize_t scull_read(struct file *filp, char __user *buf, size_t count, loff_t *f_
 ssize_t scull_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
 {
     struct scull_dev *dev = filp->private_data;
-    struct scull_qset *dptr;
+    struct scull_qset *dptr = NULL;
     int quantum = dev->quantum;
     int qset = dev->qset;
     int itemsize = quantum * qset;
@@ -264,7 +266,7 @@ static int __init scull_init_module(void)
     scull_major = MAJOR(dev); // 获得 dev_t 的主设备号
     if (0 > result) // 主设备号分配失败
     {
-        printk(KERN_WARNING "scull cannot get major %d\n", scull_major);
+        printk(KERN_ALERT "scull cannot get major %d\n", scull_major);
         return result;
     }
 
@@ -272,6 +274,7 @@ static int __init scull_init_module(void)
     scull_devices = kmalloc(scull_nr_devices * sizeof(struct scull_dev), GFP_KERNEL);
     if (NULL == scull_devices)
     {
+        printk(KERN_ALERT "kmalloc(%d * %ld) failed\n", scull_nr_devices, sizeof(struct scull_dev));
         result = -ENOMEM;
         goto fail;
     }
@@ -280,7 +283,7 @@ static int __init scull_init_module(void)
     /* 依次初始化每个设备 */
     for (i = 0; i < scull_nr_devices; i++)
     {
-        printk(KERN_ALERT "Init module: scull %d %d\n", scull_major, i);
+        printk(KERN_INFO "Init module: scull%d-%d\n", scull_major, i);
 
         scull_devices[i].quantum = scull_quantum;
         scull_devices[i].qset = scull_qset;
